@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"os/exec"
 	"regexp"
 	"spider-backend/models"
@@ -73,7 +75,8 @@ func RunVideoDownloadTask(videoID uint, url string) {
 		UpdateVideoStatus(videoID, "failed")
 		return
 	}
-	cmd.Stderr = cmd.Stdout
+	// 将标错直接打到系统控制台，防止干扰正则表达式管道，也避免被阻塞。
+	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
 		log.Printf("视频任务 %d 启动失败: %v", videoID, err)
@@ -83,6 +86,11 @@ func RunVideoDownloadTask(videoID uint, url string) {
 
 	progressRegex := regexp.MustCompile(`\[download\]\s+([\d\.]+%)`)
 	scanner := bufio.NewScanner(stdout)
+	
+	// 设置更大尺寸的缓冲区以容纳超长的控制台输出
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		matches := progressRegex.FindStringSubmatch(line)
@@ -90,6 +98,12 @@ func RunVideoDownloadTask(videoID uint, url string) {
 			UpdateVideoProgress(videoID, matches[1])
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("读取视频任务 %d 的输出时发生错误: %v", videoID, err)
+	}
+
+	// 强制排空剩余管道内容（如果提前退出扫描），防止 yt-dlp 因写满管道而阻塞，导致 cmd.Wait() 死锁
+	io.Copy(io.Discard, stdout)
 
 	if err := cmd.Wait(); err != nil {
 		log.Printf("视频下载任务 %d 结束时出现错误: %v\n", videoID, err)

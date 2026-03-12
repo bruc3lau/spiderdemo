@@ -105,6 +105,18 @@ function TaskItem({ task, onRefresh }: TaskItemProps) {
     bulkBtnText = `一键下载剩余 ${pendingVideos} 个`;
   }
 
+  // 决定任务左上角的全局展示状态
+  let displayStatus = task.status;
+  if (isAllCompleted) {
+    displayStatus = 'completed';
+  } else if (task.status !== 'searching') {
+    if (downloadingVideos > 0) {
+      displayStatus = 'downloading';
+    } else if (pendingVideos > 0) {
+      displayStatus = 'pending';
+    }
+  }
+
   return (
     <>
       <div className="task-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
@@ -112,9 +124,9 @@ function TaskItem({ task, onRefresh }: TaskItemProps) {
           <div className="task-info">
             <div className="task-keyword">"{task.keyword}"</div>
             <div className="task-meta">
-              <span className={`status-badge status-${isAllCompleted ? 'completed' : task.status}`}>
-                <StatusIcon status={isAllCompleted ? 'completed' : task.status} />
-                {isAllCompleted ? '全部完成' : getStatusText(task.status)}
+              <span className={`status-badge status-${displayStatus}`}>
+                <StatusIcon status={displayStatus} />
+                {displayStatus === 'completed' ? '全部完成' : getStatusText(displayStatus)}
               </span>
               {task.videos && task.videos.length > 0 && (
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
