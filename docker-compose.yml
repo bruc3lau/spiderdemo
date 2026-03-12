@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: spider-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      # 持久化数据库与下载文件
+      - spider-data:/app
+      - ./backend/downloads:/app/downloads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: spider-frontend
+    ports:
+      - "5173:80"  # 镜像80映射给宿主机5173，与本机开发保持体验一致
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  spider-data:

@@ -1,0 +1,18 @@
+# ========== OS & Editor ============
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ============ Backend ============
+/backend/spider-backend
+/backend/spider.db
+/backend/downloads/
+/backend/tmp/
+
+# ============ Frontend ===========
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.npm/
+/frontend/.eslintcache
