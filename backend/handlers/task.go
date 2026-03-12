@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"spider-backend/models"
 	"spider-backend/services"
 	"strconv"
@@ -64,6 +67,44 @@ func TriggerTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": task, "message": "已成功触发全部关联视频下载"})
+}
+
+// DeleteTask 删除整个任务及其关联视频。
+// 接收 deleteFiles=true 参数用于决定是否同时删除已下载的实体文件。
+func DeleteTask(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的任务 ID"})
+		return
+	}
+
+	deleteFiles := c.DefaultQuery("deleteFiles", "false") == "true"
+
+	var task models.Task
+	if err := models.DB.Preload("Videos").First(&task, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "未找到指定任务"})
+		return
+	}
+
+	// 删除关联的实体文件 (仅在 deleteFiles 为 true 时)
+	if deleteFiles {
+		for _, video := range task.Videos {
+			if video.YoutubeID != "" {
+				pattern := filepath.Join("downloads", fmt.Sprintf("*%s*", video.YoutubeID))
+				matches, _ := filepath.Glob(pattern)
+				for _, match := range matches {
+					os.Remove(match)
+				}
+			}
+		}
+	}
+
+	// 级联删除数据库中的 Videos 和 Task
+	models.DB.Where("task_id = ?", task.ID).Delete(&models.Video{})
+	models.DB.Delete(&task)
+
+	c.JSON(http.StatusOK, gin.H{"message": "任务已成功删除"})
 }
 
 // TriggerVideo 开始为指定单一视频触发下载

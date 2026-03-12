@@ -12,10 +12,10 @@ import (
 )
 
 type YtDlpJSON struct {
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	WebpageURL string `json:"webpage_url"`
-	Duration   int    `json:"duration"`
+	ID         string  `json:"id"`
+	Title      string  `json:"title"`
+	WebpageURL string  `json:"webpage_url"`
+	Duration   float64 `json:"duration"`
 }
 
 // FetchVideosForTask 搜索排行靠前的 5 个视频并保存到数据库
@@ -44,13 +44,15 @@ func FetchVideosForTask(taskID uint, keyword string) {
 				YoutubeID: ytData.ID,
 				Title:     ytData.Title,
 				URL:       ytData.WebpageURL, // flat-playlist might not return webpage_url directly, but usually it does for ytsearch.
-				Duration:  ytData.Duration,
+				Duration:  int(ytData.Duration),
 				Status:    "pending",
 			}
 			if video.URL == "" {
 				video.URL = "https://www.youtube.com/watch?v=" + video.YoutubeID
 			}
 			models.DB.Create(&video)
+		} else if err != nil {
+			log.Printf("解析 yt-dlp JSON 失败: %v", err)
 		}
 	}
 

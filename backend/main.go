@@ -30,6 +30,7 @@ func main() {
 		api.POST("/tasks", handlers.CreateTask)
 		api.POST("/tasks/:id/trigger", handlers.TriggerTask)
 		api.POST("/videos/:id/trigger", handlers.TriggerVideo)
+		api.DELETE("/tasks/:id", handlers.DeleteTask)
 	}
 
 	// 启动服务器
